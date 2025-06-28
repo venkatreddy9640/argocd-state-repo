@@ -1,0 +1,127 @@
+# ===================================================================
+# Minimal Prometheus Stack for Docker Desktop
+# File: minimal-minimal-prometheus-stack-application.yaml
+# ===================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack-minimal
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: "57.2.0"
+
+    helm:
+      valuesObject:
+        # Minimal Grafana Configuration
+        grafana:
+          enabled: true
+          adminPassword: "admin123"
+          service:
+            type: LoadBalancer
+            port: 8300
+            targetPort: 3000
+          # NO persistence - use memory only
+          persistence:
+            enabled: false
+          # Minimal resources
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          # Basic datasource
+          datasources:
+            datasources.yaml:
+              apiVersion: 1
+              datasources:
+                - name: Prometheus
+                  type: prometheus
+                  url: http://prometheus-stack-minimal-kube-prom-prometheus:9090
+                  access: proxy
+                  isDefault: true
+          # Disable problematic features
+          serviceMonitor:
+            enabled: false
+          sidecar:
+            dashboards:
+              enabled: true
+              defaultFolderName: "General"
+            datasources:
+              enabled: true
+
+        # Minimal Prometheus Configuration
+        prometheus:
+          enabled: true
+          prometheusSpec:
+            retention: 2d  # Short retention
+            # NO persistence
+            storageSpec: {}
+            # Minimal resources
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "200m"
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+            # Disable some features
+            serviceMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            probeSelectorNilUsesHelmValues: false
+
+        # Disable AlertManager
+        alertmanager:
+          enabled: false
+
+        # Disable Node Exporter (problematic in Docker Desktop)
+        nodeExporter:
+          enabled: false
+
+        # Keep Kube State Metrics (lightweight)
+        kubeStateMetrics:
+          enabled: true
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+
+        # Minimal Prometheus Operator
+        prometheusOperator:
+          enabled: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          # Disable some features
+          admissionWebhooks:
+            enabled: false
+          tls:
+            enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
