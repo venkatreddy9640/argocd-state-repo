@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: IMAGE_PLACEHOLDER  # This will be updated by the workflow
+          image: ghcr.io/venkatreddy9640/mutualfunds:main-2748c98  # This will be updated by the workflow
           ports:
             - containerPort: 8200
           env:
