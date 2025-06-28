@@ -1,0 +1,159 @@
+# ===================================================================
+# Docker Desktop Compatible Prometheus Stack
+# File: docker-desktop-prometheus-app.yaml
+# ===================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack-desktop
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: "57.2.0"
+
+    helm:
+      valuesObject:
+        # Docker Desktop Compatible Grafana Configuration
+        grafana:
+          enabled: true
+          adminPassword: "admin123"
+
+          # LoadBalancer service on port 8300
+          service:
+            type: LoadBalancer
+            port: 8300
+            targetPort: 3000
+
+          # NO persistence - avoid permission issues
+          persistence:
+            enabled: false
+
+          # Security context - run as root for Docker Desktop
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 0
+
+          # Container security context
+          containerSecurityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
+
+          # Disable init container that causes permission issues
+          initChownData:
+            enabled: false
+
+          # Basic datasource configuration
+          datasources:
+            datasources.yaml:
+              apiVersion: 1
+              datasources:
+                - name: Prometheus
+                  type: prometheus
+                  url: http://prometheus-stack-desktop-kube-prom-prometheus:9090
+                  access: proxy
+                  isDefault: true
+
+          # Minimal resource requirements
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+
+          # Disable problematic sidecars for Docker Desktop
+          sidecar:
+            dashboards:
+              enabled: false
+            datasources:
+              enabled: false
+
+          # Disable service monitor
+          serviceMonitor:
+            enabled: false
+
+        # Minimal Prometheus Configuration
+        prometheus:
+          enabled: true
+          prometheusSpec:
+            retention: 1d
+
+            # No persistence - use emptyDir
+            storageSpec: {}
+
+            # Minimal resources
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "300m"
+
+            # Basic scrape config for Java apps
+            additionalScrapeConfigs:
+              - job_name: 'java-applications'
+                kubernetes_sd_configs:
+                  - role: pod
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                    action: keep
+                    regex: true
+                  - target_label: __metrics_path__
+                    replacement: /actuator/prometheus
+
+        # Disable components that cause issues in Docker Desktop
+        alertmanager:
+          enabled: false
+
+        nodeExporter:
+          enabled: false
+
+        # Keep kube-state-metrics but minimal
+        kubeStateMetrics:
+          enabled: true
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+
+        # Minimal Prometheus Operator
+        prometheusOperator:
+          enabled: true
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          # Disable webhooks for Docker Desktop
+          admissionWebhooks:
+            enabled: false
+          tls:
+            enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
