@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: IMAGE_PLACEHOLDER  # This will be updated by the workflow
+          image: ghcr.io/venkatreddy9640/mutualfunds:main-e316bf0
           ports:
             - containerPort: 8200
           env:
@@ -26,10 +26,10 @@ spec:
               value: "8200"
           resources:
             requests:
-              memory: "256Mi"
+              memory: "1Gi"
               cpu: "250m"
             limits:
-              memory: "512Mi"
+              memory: "2Gi"
               cpu: "500m"
           livenessProbe:
             httpGet:
