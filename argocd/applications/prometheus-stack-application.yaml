@@ -22,7 +22,7 @@ spec:
       helm:
         valueFiles:
           - $values/monitoring/values.yaml
-    - repoURL: https://github.com/your-org/gitops-repo.git  # Replace with your GitOps repo URL
+    - repoURL: https://github.com/venkatareddy9640/argocd-state-repo  # Replace with your GitOps repo URL
       targetRevision: HEAD
       ref: values
 
