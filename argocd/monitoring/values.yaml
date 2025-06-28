@@ -1,0 +1,148 @@
+# ===================================================================
+# Prometheus Stack Values Configuration
+# File: monitoring/values.yaml
+# ===================================================================
+
+# Grafana Configuration
+grafana:
+  enabled: true
+
+  # Admin credentials
+  adminPassword: "admin123"  # CHANGE THIS PASSWORD!
+
+  # External access via LoadBalancer on port 8300
+  service:
+    type: LoadBalancer
+    port: 8300
+    targetPort: 3000
+
+  # Persistence for dashboards and data
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClassName: hostpath  # Docker Desktop storage class
+
+  # Pre-configure Prometheus datasource
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-stack-kube-prom-prometheus:9090
+          access: proxy
+          isDefault: true
+
+  # Default dashboards
+  defaultDashboardsEnabled: true
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Prometheus Configuration
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # Data retention
+    retention: 30d
+
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: hostpath
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+    # Resource limits
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+        cpu: "1000m"
+
+    # Service Discovery for Java Applications
+    additionalScrapeConfigs:
+      - job_name: 'java-applications'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: ['default', 'app-namespace']  # Add your app namespaces here
+
+        relabel_configs:
+          # Only scrape pods with prometheus.io/scrape=true annotation
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+
+          # Use custom metrics path (default to /actuator/prometheus for Spring Boot)
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - target_label: __metrics_path__
+            replacement: /actuator/prometheus
+
+          # Use custom port if specified, otherwise use container port
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+          # Add Kubernetes labels as Prometheus labels
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+
+          # Add namespace and pod name as labels
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: replace
+            target_label: kubernetes_container_name
+
+# AlertManager - DISABLED for now
+alertmanager:
+  enabled: false
+
+# Node Exporter for system metrics
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics for cluster metrics
+kubeStateMetrics:
+  enabled: true
+
+# Prometheus Operator
+prometheusOperator:
+  enabled: true
+
+  # Resource limits for operator
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Global settings
+global:
+  rbac:
+    create: true
+    pspEnabled: false
