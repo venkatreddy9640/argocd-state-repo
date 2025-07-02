@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: ghcr.io/venkatreddy9640/mutualfunds:main-57ac4b7
+          image: ghcr.io/venkatreddy9640/mutualfunds:main-3a9cdf7
           ports:
             - containerPort: 8200
           env:
