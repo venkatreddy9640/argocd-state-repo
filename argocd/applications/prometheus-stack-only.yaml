@@ -54,8 +54,7 @@ spec:
               - job_name: 'kubernetes-service-endpoints'
                 kubernetes_sd_configs:
                   - role: endpoints
-                    namespaces:
-                      names: ['default', 'app-namespace']
+                    # No namespaces specified = scan ALL namespaces
 
                 relabel_configs:
                   # Only scrape services with prometheus.io/scrape=true annotation
