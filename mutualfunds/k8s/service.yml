@@ -4,6 +4,10 @@ metadata:
   name: java-app-service
   labels:
     app: java-app
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"  # ← Tells Prometheus the path
+    prometheus.io/port: "8080"
 spec:
   selector:
     app: java-app
