@@ -7,7 +7,7 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/path: "/actuator/prometheus"  # ← Tells Prometheus the path
-    prometheus.io/port: "8080"
+    prometheus.io/port: "8200"
 spec:
   selector:
     app: java-app
