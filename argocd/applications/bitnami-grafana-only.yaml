@@ -1,0 +1,56 @@
+# ===================================================================
+# Solution 1: Bitnami Grafana Only
+# File: bitnami-grafana-only.yaml
+# ===================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitnami-grafana
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: grafana
+    targetRevision: "12.0.8"
+
+    helm:
+      valuesObject:
+        # Admin credentials
+        admin:
+          user: "admin"
+          password: "admin123"
+
+        # LoadBalancer service on port 8300
+        service:
+          type: LoadBalancer
+          ports:
+            grafana: 8300
+
+        # NO persistence - avoid volume permission issues
+        persistence:
+          enabled: false
+
+        # Minimal resources
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
