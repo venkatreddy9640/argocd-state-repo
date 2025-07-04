@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: java-app-deployment
+  namespace: mututalfunds
   labels:
     app: java-app
 spec:
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: ghcr.io/venkatreddy9640/mutualfunds:main-e316bf0
+          image: ghcr.io/venkatreddy9640/mutualfunds:main-57ac4b7
           ports:
             - containerPort: 8200
           env:
@@ -43,7 +44,7 @@ spec:
             httpGet:
               path: /
               port: 8200
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
